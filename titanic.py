@@ -7,13 +7,14 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-#from sklearn.preprocessing import OrdinalEncoder
 from sklearn.impute import SimpleImputer
 
 from sklearn.preprocessing import StandardScaler
 
 from sklearn.linear_model import SGDClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC, LinearSVC
+
 
 from sklearn.model_selection import cross_val_score
 
@@ -97,31 +98,100 @@ sgd_clf.fit(titanic, titanic_labels)
 
 forest_clf = RandomForestClassifier(n_estimators=100, random_state=42)
 forest_clf.fit(titanic, titanic_labels)
+
+svc = SVC()
+svc.fit(titanic, titanic_labels)
+
+acc_sgd = round(sgd_clf.score(titanic, titanic_labels) * 100, 2)
+acc_forest = round(forest_clf.score(titanic, titanic_labels) * 100, 2)
+acc_svc = round(svc.score(titanic, titanic_labels) * 100, 2)
+
+print("sgd Accuracy in train_set before scaler: ",acc_sgd)
+print("RF Accuracy in train_set before scaler: ",acc_forest)
+print("svc Accuracy in train_set before scaler: ",acc_svc)
+
+
 print('sgd_clf Accuracy using CV with 10 folds: ', cross_val_score(sgd_clf, titanic, titanic_labels, cv=10, scoring="accuracy"))
 print('forest Accuracy using CV with 10 folds: ', cross_val_score(forest_clf, titanic, titanic_labels, cv=10, scoring="accuracy"))
 
 #Feature Scaling
 #RN just Age ang Fare arent a categorical feature and Fare has a huge scaling 
-
 scaler = StandardScaler()
-#fit_transform(data['Embarked'].values.reshape(-1, 1))
-titanic["Age"] = scaler.fit_transform(titanic["Age"].values.reshape(-1,1))
-titanic["Fare"] = scaler.fit_transform(titanic["Fare"].values.reshape(-1,1))
-print(titanic.info())
-print(titanic.head())
+titanic_scaled = titanic.copy()
+titanic_scaled["Age"] = scaler.fit_transform(titanic["Age"].values.reshape(-1,1))
+titanic_scaled["Fare"] = scaler.fit_transform(titanic["Fare"].values.reshape(-1,1))
+print(titanic_scaled.info())
+print(titanic_scaled.head())
+
+sgd_clf.fit(titanic_scaled, titanic_labels)
+forest_clf.fit(titanic_scaled, titanic_labels)
+svc.fit(titanic_scaled, titanic_labels)
+
+acc_sgd = round(sgd_clf.score(titanic, titanic_labels) * 100, 2)
+acc_forest = round(forest_clf.score(titanic, titanic_labels) * 100, 2)
+acc_svc = round(svc.score(titanic, titanic_labels) * 100, 2)
+print("sgd Accuracy in train_set after scaler: ",acc_sgd)
+print("RF Accuracy in train_set after scaler: ",acc_forest)
+print("svc Accuracy in train_set after scaler: ",acc_svc)
 
 print('sgd_clf Accuracy using CV with 10 folds: ', cross_val_score(sgd_clf, titanic, titanic_labels, cv=10, scoring="accuracy"))
 print('forest Accuracy using CV with 10 folds: ', cross_val_score(forest_clf, titanic, titanic_labels, cv=10, scoring="accuracy"))
+
+#instead of using Stander Scaler we can use Bands to categorize
+titanic_bands = titanic.copy()
+train['AgeBand'] = pd.cut(train['Age'], 5)
+print(train[['AgeBand', 'Survived']].groupby(['AgeBand'], as_index=False).mean().sort_values(by='AgeBand', ascending=True))
+
+titanic_bands.loc[ titanic_bands['Age'] <= 16, 'Age'] = 0
+titanic_bands.loc[(titanic_bands['Age'] > 16) & (titanic_bands['Age'] <= 32), 'Age'] = 1
+titanic_bands.loc[(titanic_bands['Age'] > 32) & (titanic_bands['Age'] <= 48), 'Age'] = 2
+titanic_bands.loc[(titanic_bands['Age'] > 48) & (titanic_bands['Age'] <= 64), 'Age'] = 3
+titanic_bands.loc[ titanic_bands['Age'] > 64, 'Age']
+
+train['FareBand'] = pd.qcut(train['Fare'], 4)
+print(train[['FareBand', 'Survived']].groupby(['FareBand'], as_index=False).mean().sort_values(by='FareBand', ascending=True))
+
+titanic_bands.loc[ titanic_bands['Fare'] <= 7.91, 'Fare'] = 0
+titanic_bands.loc[(titanic_bands['Fare'] > 7.91) & (titanic_bands['Fare'] <= 14.454), 'Fare'] = 1
+titanic_bands.loc[(titanic_bands['Fare'] > 14.454) & (titanic_bands['Fare'] <= 31), 'Fare']   = 2
+titanic_bands.loc[ titanic_bands['Fare'] > 31, 'Fare'] = 3
+titanic_bands['Fare'] = titanic_bands['Fare'].astype(int)
+
+print(titanic_bands.info())
+print(titanic_bands.head())
+
+sgd_clf.fit(titanic_bands, titanic_labels)
+forest_clf.fit(titanic_bands, titanic_labels)
+svc.fit(titanic_bands, titanic_labels)
+
+
+acc_sgd = round(sgd_clf.score(titanic_bands, titanic_labels) * 100, 2)
+acc_forest = round(forest_clf.score(titanic_bands, titanic_labels) * 100, 2)
+acc_svc = round(svc.score(titanic_bands, titanic_labels) * 100, 2)
+print("sgd Accuracy in train_set bands: ",acc_sgd)
+print("RF Accuracy in train_set bands: ",acc_forest)
+print("svc Accuracy in train_set bands: ",acc_svc)
+
 
 test = test.drop("Name",axis=1)
 test = test.drop("Ticket",axis=1)
 test = test.drop("Cabin",axis=1)
 test = test.drop("PassengerId",axis=1)
+#test["Age"] = scaler.fit_transform(test["Age"].values.reshape(-1,1))
+#test["Fare"] = scaler.fit_transform(test["Fare"].values.reshape(-1,1))
 
-test["Age"] = scaler.fit_transform(test["Age"].values.reshape(-1,1))
-test["Fare"] = scaler.fit_transform(test["Fare"].values.reshape(-1,1))
+test.loc[ test['Age'] <= 16, 'Age'] = 0
+test.loc[(test['Age'] > 16) & (test['Age'] <= 32), 'Age'] = 1
+test.loc[(test['Age'] > 32) & (test['Age'] <= 48), 'Age'] = 2
+test.loc[(test['Age'] > 48) & (test['Age'] <= 64), 'Age'] = 3
+test.loc[ test['Age'] > 64, 'Age']
 
-test["Fare"] = test["Fare"].fillna(dataset.loc[:,"Fare"].median())	
+test.loc[ test['Fare'] <= 7.91, 'Fare'] = 0
+test.loc[(test['Fare'] > 7.91) & (test['Fare'] <= 14.454), 'Fare'] = 1
+test.loc[(test['Fare'] > 14.454) & (test['Fare'] <= 31), 'Fare']   = 2
+test.loc[ test['Fare'] > 31, 'Fare'] = 3
+
+test["Fare"] = test["Fare"].fillna(train.loc[:,"Fare"].median())	
 
 print(test.info())
 print(test.head())
@@ -133,7 +203,7 @@ submission = pd.DataFrame({
         "Survived": Y_pred
     })
 
-submission.to_csv('../Titanic/submission.csv', index=False)
+submission.to_csv('../Titanic-Machine-Learning-from-Disaster/submission.csv', index=False)
 
 
 
