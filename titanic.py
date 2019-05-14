@@ -51,7 +51,25 @@ for dataset in train, test:
 #For age we also have missing values
 #for now lets use the median
 for dataset in train, test:
-	dataset["Age"] = dataset["Age"].fillna(dataset.loc[:,"Age"].median())	
+	dataset["Age"] = dataset["Age"].fillna(dataset.loc[:,"Age"].median())
+
+#add a new feature Title
+for dataset in train, test:
+	dataset['Title'] = dataset.Name.str.extract(' ([A-Za-z]+)\.', expand=False)
+
+
+title_mapping = {"Mr": 1, "Miss": 2, "Mrs": 3, "Master": 4, "Rare": 5}
+
+for dataset in train, test:
+    dataset['Title'] = dataset['Title'].replace(['Lady', 'Countess','Capt', 'Col',\
+ 	'Don', 'Dr', 'Major', 'Rev', 'Sir', 'Jonkheer', 'Dona'], 'Rare')
+
+    dataset['Title'] = dataset['Title'].replace('Mlle', 'Miss')
+    dataset['Title'] = dataset['Title'].replace('Ms', 'Miss')
+    dataset['Title'] = dataset['Title'].replace('Mme', 'Mrs')
+
+    dataset['Title'] = dataset['Title'].map(title_mapping)
+    dataset['Title'] = dataset['Title'].fillna(0)
 
 
 #separe features from labels
@@ -83,12 +101,14 @@ print(train[["Sex","Survived"]].groupby(["Sex"],as_index=False).mean().sort_valu
 print(train[["SibSp","Survived"]].groupby(["SibSp"],as_index=False).mean().sort_values(by="Survived", ascending=False))
 print(train[["Parch","Survived"]].groupby(["Parch"],as_index=False).mean().sort_values(by="Survived", ascending=False))
 print(train[["Embarked","Survived"]].groupby(["Embarked"],as_index=False).mean().sort_values(by="Survived", ascending=False))
+print(train[['Title', 'Survived']].groupby(['Title'], as_index=False).mean())
 
 #plot_hist_feat_surv("Age")
 #plot_hist_feat_surv("Fare")
 #plot_hist_feat_surv("Pclass")
 #plot_hist_feat_surv("Sex")
 #plot_hist_feat_surv("Embarked")
+#plot_hist_feat_surv("Title")
 
 print(titanic.info())
 print(titanic.head())
