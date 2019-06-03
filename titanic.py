@@ -12,8 +12,10 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 
 from sklearn.linear_model import SGDClassifier, LogisticRegression
-from sklearn.ensemble import RandomForestClassifier, VotingClassifier
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier, BaggingClassifier
 from sklearn.svm import SVC, LinearSVC
+
+from sklearn.tree import DecisionTreeClassifier
 
 
 from sklearn.model_selection import cross_val_score
@@ -194,6 +196,14 @@ print("svc Accuracy in train_set bands: ",acc_svc)
 
 log_clf = LogisticRegression()
 
+bag_clf = BaggingClassifier(
+	DecisionTreeClassifier(), n_estimators=500,
+	max_samples=100, bootstrap=True, n_jobs=-1
+)
+bag_clf.fit(titanic_bands, titanic_labels)
+acc_bag = round(bag_clf.score(titanic_bands, titanic_labels) * 100, 2)
+print("BaggingClassifier Accuracy in train_set bands",acc_bag)
+
 voting_clf_hard = VotingClassifier(
 	estimators = [('sgd',sgd_clf), ('svm',svc), ('forest',forest_clf), ('lr', log_clf) ],
 	voting = 'hard'
@@ -202,7 +212,7 @@ voting_clf_hard.fit(titanic_bands, titanic_labels)
 acc_vch = round(voting_clf_hard.score(titanic_bands, titanic_labels) * 100, 2)
 
 voting_clf_soft = VotingClassifier(
-	estimators = [('svm',svc), ('forest',forest_clf)],
+	estimators = [('svm',svc), ('forest',forest_clf),('bag',bag_clf)],
 	voting = 'soft'
 	)
 voting_clf_soft.fit(titanic_bands, titanic_labels)
@@ -210,7 +220,6 @@ acc_vcs = round(voting_clf_soft.score(titanic_bands, titanic_labels) * 100, 2)
 
 print("voting_clf_hard Accuracy in train_set bands: ",acc_vch)
 print("voting_clf_soft Accuracy in train_set bands: ",acc_vcs)
-
 
 
 test = test.drop("Name",axis=1)
