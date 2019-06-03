@@ -11,8 +11,8 @@ from sklearn.impute import SimpleImputer
 
 from sklearn.preprocessing import StandardScaler
 
-from sklearn.linear_model import SGDClassifier
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import SGDClassifier, LogisticRegression
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.svm import SVC, LinearSVC
 
 
@@ -113,13 +113,13 @@ print(train[['Title', 'Survived']].groupby(['Title'], as_index=False).mean())
 print(titanic.info())
 print(titanic.head())
 
-sgd_clf = SGDClassifier(max_iter=5, tol=-np.infty, random_state=42)
+sgd_clf = SGDClassifier(loss = 'modified_huber',max_iter=5, tol=-np.infty, random_state=42)
 sgd_clf.fit(titanic, titanic_labels)
 
 forest_clf = RandomForestClassifier(n_estimators=100, random_state=42)
 forest_clf.fit(titanic, titanic_labels)
 
-svc = SVC()
+svc = SVC(probability=True)
 svc.fit(titanic, titanic_labels)
 
 acc_sgd = round(sgd_clf.score(titanic, titanic_labels) * 100, 2)
@@ -192,6 +192,26 @@ print("sgd Accuracy in train_set bands: ",acc_sgd)
 print("RF Accuracy in train_set bands: ",acc_forest)
 print("svc Accuracy in train_set bands: ",acc_svc)
 
+log_clf = LogisticRegression()
+
+voting_clf_hard = VotingClassifier(
+	estimators = [('sgd',sgd_clf), ('svm',svc), ('forest',forest_clf), ('lr', log_clf) ],
+	voting = 'hard'
+	)
+voting_clf_hard.fit(titanic_bands, titanic_labels)
+acc_vch = round(voting_clf_hard.score(titanic_bands, titanic_labels) * 100, 2)
+
+voting_clf_soft = VotingClassifier(
+	estimators = [('svm',svc), ('forest',forest_clf)],
+	voting = 'soft'
+	)
+voting_clf_soft.fit(titanic_bands, titanic_labels)
+acc_vcs = round(voting_clf_soft.score(titanic_bands, titanic_labels) * 100, 2)
+
+print("voting_clf_hard Accuracy in train_set bands: ",acc_vch)
+print("voting_clf_soft Accuracy in train_set bands: ",acc_vcs)
+
+
 
 test = test.drop("Name",axis=1)
 test = test.drop("Ticket",axis=1)
@@ -216,7 +236,7 @@ test["Fare"] = test["Fare"].fillna(train.loc[:,"Fare"].median())
 print(test.info())
 print(test.head())
 
-Y_pred = forest_clf.predict(test)
+Y_pred = voting_clf_soft.predict(test)
 
 submission = pd.DataFrame({
         "PassengerId": X_test["PassengerId"],
