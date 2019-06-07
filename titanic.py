@@ -17,8 +17,12 @@ from sklearn.svm import SVC, LinearSVC
 
 from sklearn.tree import DecisionTreeClassifier
 
-
 from sklearn.model_selection import cross_val_score
+
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import train_test_split
+
+from sklearn.model_selection import GridSearchCV
 
 #TODO refactoring
 #TODO pipeline
@@ -130,6 +134,28 @@ def bands(dset):
 
 	return dset
 
+#from hands-on book
+def plot_learning_curves(model, X, y, name):
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=10)
+    train_errors, val_errors = [], []
+    for m in range(10, len(X_train)):
+        model.fit(X_train[:m], y_train[:m])
+        y_train_predict = model.predict(X_train[:m])
+        y_val_predict = model.predict(X_val)
+        train_errors.append(mean_squared_error(y_train[:m], y_train_predict))
+        val_errors.append(mean_squared_error(y_val, y_val_predict))
+
+    plt.plot(np.sqrt(train_errors), "r-+", linewidth=2, label="train")
+    plt.plot(np.sqrt(val_errors), "b-", linewidth=3, label="val")
+    plt.legend(loc="upper right", fontsize=14)   
+    plt.xlabel("Training set size", fontsize=14) 
+    plt.ylabel("RMSE", fontsize=14)    
+
+    plt.axis([0, len(X_train), 0, 2])                         
+    plt.savefig(name)  
+    plt.show()                                      
+          
+
 def sub(clf):
 	Y_pred = clf.predict(test)
 
@@ -170,10 +196,13 @@ titanic = del_feat(titanic)
 sgd_clf = SGDClassifier(loss = 'modified_huber',max_iter=5, tol=-np.infty, random_state=42)
 sgd_clf.fit(titanic, titanic_labels)
 
-forest_clf = RandomForestClassifier(n_estimators=100, random_state=42)
+#forest_clf = RandomForestClassifier(n_estimators=100, random_state=42)
+#plot_learning_curves(forest_clf,titanic,titanic_labels, "RF before scaler")
+forest_clf = RandomForestClassifier(n_estimators=100, max_depth=5)
 forest_clf.fit(titanic, titanic_labels)
 
 svc = SVC(probability=True)
+#plot_learning_curves(svc,titanic,titanic_labels, "svc before scaler")
 svc.fit(titanic, titanic_labels)
 
 log_clf = LogisticRegression()
@@ -184,6 +213,7 @@ acc_score(forest_clf,"RF before scaler",titanic,titanic_labels )
 acc_score(svc,"svc before scaler",titanic,titanic_labels )
 acc_score(log_clf,"log_clf before scaler",titanic,titanic_labels )
 
+
 #print('sgd_clf Accuracy using CV with 10 folds: ', cross_val_score(sgd_clf, titanic, titanic_labels, cv=10, scoring="accuracy"))
 #print('forest Accuracy using CV with 10 folds: ', cross_val_score(forest_clf, titanic, titanic_labels, cv=10, scoring="accuracy"))
 
@@ -193,6 +223,9 @@ scaler = StandardScaler()
 titanic_scaled = titanic.copy()
 l_feat = ["Age","Fare"]
 titanic_scaled = feat_scaling(titanic_scaled,l_feat)
+
+#plot_learning_curves(forest_clf,titanic_scaled,titanic_labels, "RF after scaler")
+#plot_learning_curves(svc,titanic_scaled,titanic_labels, "svc after scaler")
 
 sgd_clf.fit(titanic_scaled, titanic_labels)
 forest_clf.fit(titanic_scaled, titanic_labels)
@@ -211,6 +244,10 @@ acc_score(log_clf,"log_clf after scaler",titanic_scaled,titanic_labels )
 titanic_bands = titanic.copy()
 train['AgeBand'] = pd.cut(train['Age'], 5)
 titanic_bands = bands(titanic_bands)
+
+#plot_learning_curves(forest_clf,titanic_bands,titanic_labels, "RF bands")
+#plot_learning_curves(svc,titanic_bands,titanic_labels, "svc bands")
+
 
 sgd_clf.fit(titanic_bands, titanic_labels)
 forest_clf.fit(titanic_bands, titanic_labels)
@@ -231,6 +268,14 @@ bag_clf.fit(titanic_bands, titanic_labels)
 acc_score(bag_clf,"bag_clf bands",titanic_bands,titanic_labels )
 '''
 
+
+#param_grid = [{'max_depth': [1, 10, 100, None]}]
+#grid_search = GridSearchCV(forest_clf, param_grid, cv=5,scoring='accuracy', return_train_score=True)
+#l_md = [3,5,7]
+#for max_d in l_md:
+#	forest_clf = RandomForestClassifier(n_estimators=100, max_depth=max_d)
+#	plot_learning_curves(forest_clf,titanic,titanic_labels, "RF max_depth = " + str(max_d))
+
 voting_clf_hard = VotingClassifier(
 	estimators = [('svm',svc), ('forest',forest_clf)],
 	voting = 'hard'
@@ -247,7 +292,8 @@ acc_score(voting_clf_soft,"voting_clf_soft before scaler",titanic,titanic_labels
 
 test = del_feat(test)
 #test = feat_scaling(test,l_feat)
-test = bands(test)
+#test = bands(test)
+#forest_clf.fit(titanic, titanic_labels)
 
 print(test.info())
 print(test.head())
