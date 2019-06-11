@@ -104,8 +104,13 @@ def correlations():
 	plot_hist_feat_surv("Title")
 
 def acc_score(clf,name,x,y):
-	acc = round(clf.score(x, y) * 100, 2)
-	print(name + " Accuracy : " + str(acc))
+	X_train, X_val, y_train, y_val = train_test_split(x, y, test_size=0.2, random_state=10)
+	clf.fit(X_train,y_train)
+	acc = round(clf.score(X_val, y_val) * 100, 2)
+	print(name + " Accuracy using validation set: " + str(acc))
+	l = cross_val_score(clf, x, y, cv=10, scoring="accuracy")
+	avg = sum(l)/len(l)
+	print(name + " avg accuracy using CV with 10 folds: " + str(round(avg,2) * 100))
 
 def feat_scaling(dset,l_feat):
 	scaler = StandardScaler()
@@ -194,28 +199,16 @@ titanic = del_feat(titanic)
 
 
 sgd_clf = SGDClassifier(loss = 'modified_huber',max_iter=5, tol=-np.infty, random_state=42)
-sgd_clf.fit(titanic, titanic_labels)
-
-#forest_clf = RandomForestClassifier(n_estimators=100, random_state=42)
 #plot_learning_curves(forest_clf,titanic,titanic_labels, "RF before scaler")
-forest_clf = RandomForestClassifier(n_estimators=100, max_depth=5)
-forest_clf.fit(titanic, titanic_labels)
-
+forest_clf = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
 svc = SVC(probability=True)
 #plot_learning_curves(svc,titanic,titanic_labels, "svc before scaler")
-svc.fit(titanic, titanic_labels)
-
 log_clf = LogisticRegression()
-log_clf.fit(titanic, titanic_labels)
 
 acc_score(sgd_clf, "sgd_clf before scaler",titanic,titanic_labels)
 acc_score(forest_clf,"RF before scaler",titanic,titanic_labels )
 acc_score(svc,"svc before scaler",titanic,titanic_labels )
 acc_score(log_clf,"log_clf before scaler",titanic,titanic_labels )
-
-
-#print('sgd_clf Accuracy using CV with 10 folds: ', cross_val_score(sgd_clf, titanic, titanic_labels, cv=10, scoring="accuracy"))
-#print('forest Accuracy using CV with 10 folds: ', cross_val_score(forest_clf, titanic, titanic_labels, cv=10, scoring="accuracy"))
 
 #Feature Scaling
 #RN just Age ang Fare arent a categorical feature and Fare has a huge scaling 
@@ -227,18 +220,10 @@ titanic_scaled = feat_scaling(titanic_scaled,l_feat)
 #plot_learning_curves(forest_clf,titanic_scaled,titanic_labels, "RF after scaler")
 #plot_learning_curves(svc,titanic_scaled,titanic_labels, "svc after scaler")
 
-sgd_clf.fit(titanic_scaled, titanic_labels)
-forest_clf.fit(titanic_scaled, titanic_labels)
-svc.fit(titanic_scaled, titanic_labels)
-log_clf.fit(titanic_scaled, titanic_labels)
-
 acc_score(sgd_clf, "sgd_clf after scaler",titanic_scaled,titanic_labels)
 acc_score(forest_clf,"RF after scaler",titanic_scaled,titanic_labels )
 acc_score(svc,"svc after scaler",titanic_scaled,titanic_labels )
 acc_score(log_clf,"log_clf after scaler",titanic_scaled,titanic_labels )
-
-#print('sgd_clf Accuracy using CV with 10 folds: ', cross_val_score(sgd_clf, titanic, titanic_labels, cv=10, scoring="accuracy"))
-#print('forest Accuracy using CV with 10 folds: ', cross_val_score(forest_clf, titanic, titanic_labels, cv=10, scoring="accuracy"))
 
 #instead of using Stander Scaler we can use Bands to categorize
 titanic_bands = titanic.copy()
@@ -247,12 +232,6 @@ titanic_bands = bands(titanic_bands)
 
 #plot_learning_curves(forest_clf,titanic_bands,titanic_labels, "RF bands")
 #plot_learning_curves(svc,titanic_bands,titanic_labels, "svc bands")
-
-
-sgd_clf.fit(titanic_bands, titanic_labels)
-forest_clf.fit(titanic_bands, titanic_labels)
-svc.fit(titanic_bands, titanic_labels)
-log_clf.fit(titanic_bands, titanic_labels)
 
 acc_score(sgd_clf, "sgd_clf bands",titanic_bands,titanic_labels)
 acc_score(forest_clf,"RF bands",titanic_bands,titanic_labels )
@@ -267,7 +246,6 @@ bag_clf = BaggingClassifier(
 bag_clf.fit(titanic_bands, titanic_labels)
 acc_score(bag_clf,"bag_clf bands",titanic_bands,titanic_labels )
 '''
-
 
 #param_grid = [{'max_depth': [1, 10, 100, None]}]
 #grid_search = GridSearchCV(forest_clf, param_grid, cv=5,scoring='accuracy', return_train_score=True)
