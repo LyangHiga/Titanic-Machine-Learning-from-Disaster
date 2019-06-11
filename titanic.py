@@ -78,11 +78,23 @@ def data_transformation(dset):
 	    dataset['Title'] = dataset['Title'].map(title_mapping)
 	    dataset['Title'] = dataset['Title'].fillna(0)
 
+	#Create new feature combining existing features from kaggle tutorial
+	for dataset in dset:
+		dataset['FamilySize'] = dataset['SibSp'] + dataset['Parch'] + 1
+
+	for dataset in dset:
+		dataset['IsAlone'] = 0
+		dataset.loc[dataset['FamilySize'] == 1, 'IsAlone'] = 1
+
+
 def del_feat(dset):
 	dset = dset.drop("Name",axis=1)
 	dset = dset.drop("Ticket",axis=1)
 	dset = dset.drop("Cabin",axis=1)
 	dset = dset.drop("PassengerId",axis=1)
+	dset = dset.drop("FamilySize",axis=1)
+	dset = dset.drop("Parch",axis=1)
+	dset = dset.drop("SibSp",axis=1)
 	return dset
 
 def correlations():
@@ -95,6 +107,7 @@ def correlations():
 	print(train[["Parch","Survived"]].groupby(["Parch"],as_index=False).mean().sort_values(by="Survived", ascending=False))
 	print(train[["Embarked","Survived"]].groupby(["Embarked"],as_index=False).mean().sort_values(by="Survived", ascending=False))
 	print(train[['Title', 'Survived']].groupby(['Title'], as_index=False).mean())
+	print(train_df[['IsAlone', 'Survived']].groupby(['IsAlone'], as_index=False).mean())
 
 	plot_hist_feat_surv("Age")
 	plot_hist_feat_surv("Fare")
@@ -102,6 +115,7 @@ def correlations():
 	plot_hist_feat_surv("Sex")
 	plot_hist_feat_surv("Embarked")
 	plot_hist_feat_surv("Title")
+	plot_hist_feat_surv("IsAlone")
 
 def acc_score(clf,name,x,y):
 	X_train, X_val, y_train, y_val = train_test_split(x, y, test_size=0.2, random_state=10)
@@ -117,6 +131,7 @@ def feat_scaling(dset,l_feat):
 	for feat in l_feat:
 		dset[feat] = scaler.fit_transform(dset[feat].values.reshape(-1,1))
 	return dset
+
 
 def bands(dset):
 	train['AgeBand'] = pd.cut(train['Age'], 5)
